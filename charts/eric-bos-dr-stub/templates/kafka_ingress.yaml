@@ -1,0 +1,20 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name:  {{ include "eric-bos-dr-stub.name" . }}-kafka-ingress
+  annotations:
+    kubernetes.io/ingress.class: {{ printf "oam-%s" .Release.Namespace }}
+    {{- include "eric-bos-dr-stub.annotations" . | nindent 4 }}
+  labels:
+    {{- include "eric-bos-dr-stub.labels" .| nindent 4 }}
+spec:
+  routes:
+  - conditions:
+    - prefix: /
+    services:
+    - name: {{ include "eric-bos-dr-stub.name" . }}-kafka
+      port: 8082
+  virtualhost:
+    fqdn:  {{ required "A valid .Values.ingress.hostname entry required" .Values.ingress.hostname }}
+{{- end }}

@@ -1,0 +1,12 @@
+{
+    "request": {
+        "method": "POST",
+		"urlPattern": "/login?(.*)"
+    },
+    "response": {
+        "status": 200,
+        "headers": {
+            "set-cookie": "JSESSIONID=a52f3a6d-d328-4708-bfa3-5f2d5dfcc151; Path=/; Max-Age=36000; Expires=Fri, 09 Jun 2023 02:01:40 GMT; Secure; HttpOnly; SameSite=Lax"
+        }
+    }
+}

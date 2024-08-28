@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "eric-bos-dr-stub.name" . }}-kafka
+  labels:
+    {{- include "eric-bos-dr-stub.labels" . | nindent 4 }}
+    app: {{ template "eric-bos-dr-stub.name" . }}-kafka
+    chart: {{ template "eric-bos-dr-stub.chart" . }}
+  annotations:
+  {{- include "eric-bos-dr-stub.annotations" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: {{ .Values.updateStrategy.type }}
+        {{- if and (eq .Values.updateStrategy.type "RollingUpdate") .Values.updateStrategy.rollingUpdate }}
+    rollingUpdate:
+{{ toYaml .Values.updateStrategy.rollingUpdate | trim | indent 6 }}
+    {{- end }}
+  selector:
+    matchLabels:
+      app: {{ include "eric-bos-dr-stub.name" . }}-kafka
+  template:
+    metadata:
+      annotations:
+        {{- include "eric-bos-dr-stub.annotations" . | nindent 8 }}
+      labels:
+        {{- include "eric-bos-dr-stub.labels" .| nindent 8}}
+        app: {{ template "eric-bos-dr-stub.name" . }}-kafka
+        chart: {{ template "eric-bos-dr-stub.chart" . }}
+    spec:
+      {{ with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{ toYaml . | nindent 6 }}
+      {{ end }}
+      {{- if index .Values.podPriority "eric-bos-dr-stub" "priorityClassName" }}
+      priorityClassName: {{ index .Values.podPriority "eric-bos-dr-stub" "priorityClassName" | quote }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- if  .Values.imageCredentials.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.imageCredentials.pullSecret | quote }}
+      {{- else if .Values.global.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.global.pullSecret | quote }}
+      {{- end }}
+      affinity:
+        podAntiAffinity:
+      {{- include "eric-bos-dr-stub.pod-antiaffinity-type" . | nindent 10 }}
+      serviceAccountName: {{ template "eric-bos-dr-stub.name" . }}-sa
+      containers:
+      - name: {{ .Chart.Name }}-kafka1
+        image: {{ template "eric-bos-dr-stub.imagePath" (dict "imageId" "kafkaImage" "values" .Values "files" .Files) }}
+        imagePullPolicy: {{ .Values.global.registry.imagePullPolicy | quote }}
+        env:
+          - name: KAFKA_NODE_ID
+            value: '{{ .Values.kafka.nodeId }}'
+          - name: CLUSTER_ID
+            value: "ZTg2MjdhZWYxNTkxNDhhYW"
+            # Generate cluster id using 'cat /proc/sys/kernel/random/uuid | tr -d '-' | base64 | cut -b 1-22'
+          - name: KAFKA_PROCESS_ROLES
+            value: "broker,controller"
+          - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+            value: '{{ .Values.kafka.nodeId }}@//:9093'
+          - name: KAFKA_CONTROLLER_LISTENER_NAMES
+            value: 'CONTROLLER'
+          - name: KAFKA_ADVERTISED_LISTENERS
+            value: PLAINTEXT://{{ include "eric-bos-dr-stub.name" . }}-kafka:9092,SSL://{{ include "eric-bos-dr-stub.name" . }}-kafka:9094
+          - name: KAFKA_LISTENERS
+            value: PLAINTEXT://:9092,CONTROLLER://:9093,SSL://:9094
+          - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+            value: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,SSL:SSL
+          - name: KAFKA_REST_BOOTSTRAP_SERVERS
+            value: {{ include "eric-bos-dr-stub.name" . }}-kafka:9092
+          - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+            value: "1"
+          - name: TOPIC_AUTO_CREATE
+            value: '{{ .Values.kafka.topicAutoCreate }}'
+          - name: KAFKA_SSL_CLIENT_AUTH
+            value: '{{ .Values.kafka.sslClientAuth }}'
+          - name: KAFKA_SSL_KEYSTORE_FILENAME
+            value: "keystore.jks"
+          - name: KAFKA_SSL_KEYSTORE_CREDENTIALS
+            value: "keystore.credentials"
+          - name: KAFKA_SSL_KEY_CREDENTIALS
+            value: "key.credentials"
+          - name: KAFKA_SSL_TRUSTSTORE_FILENAME
+            value: "truststore.jks"
+          - name: KAFKA_SSL_TRUSTSTORE_CREDENTIALS
+            value: "truststore.credentials"
+        ports:
+          - name: plaintext
+            containerPort: 9092
+          - name: ssl
+            containerPort: 9094
+          - name: http
+            containerPort: 8082
+        resources: {{- include "eric-bos-dr-stub.resourcesHelper" (dict "Values" .Values "resourceName" "eric-bos-dr-stub-kafka") | nindent 12 }}
+        livenessProbe:
+          tcpSocket:
+            port: 9092
+          initialDelaySeconds: {{ index .Values.probes "eric-bos-dr-stub-kafka" "livenessProbe" "initialDelaySeconds" }}
+          periodSeconds: {{ index .Values.probes "eric-bos-dr-stub-kafka" "livenessProbe" "periodSeconds" }}
+          timeoutSeconds: {{ index .Values.probes "eric-bos-dr-stub-kafka" "livenessProbe" "timeoutSeconds" }}
+          failureThreshold: {{ index .Values.probes  "eric-bos-dr-stub-kafka" "livenessProbe" "failureThreshold" }}
+        readinessProbe:
+          tcpSocket:
+            port: 9092
+          initialDelaySeconds: {{ index .Values.probes "eric-bos-dr-stub-kafka" "readinessProbe" "initialDelaySeconds" }}
+          periodSeconds: {{ index .Values.probes "eric-bos-dr-stub-kafka" "readinessProbe" "periodSeconds" }}
+          timeoutSeconds: {{ index .Values.probes "eric-bos-dr-stub-kafka" "readinessProbe" "timeoutSeconds" }}
+          failureThreshold: {{ index .Values.probes  "eric-bos-dr-stub-kafka" "readinessProbe" "failureThreshold" }}
+        volumeMounts:
+        - mountPath: /etc/kafka/secrets
+          name: kafka-jks-volume
+      volumes:
+      - name: kafka-jks-volume
+        secret:
+          secretName: {{ include "eric-bos-dr-stub.name" . }}-kafka-jks-secret
+
+  {{- include "eric-bos-dr-stub.nodeSelector" .| indent 6 }}

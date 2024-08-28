@@ -1,0 +1,98 @@
+#
+# COPYRIGHT Ericsson 2023
+#
+#
+#
+# The copyright to the computer program(s) herein is the property of
+#
+# Ericsson Inc. The programs may be used and/or copied only with written
+#
+# permission from Ericsson Inc. or in accordance with the terms and
+#
+# conditions stipulated in the agreement/contract under which the
+#
+# program(s) have been supplied.
+#
+
+modelVersion: 2.0
+description: "D&R Test Stub Pipeline"
+
+docker-images:
+  - adp-helm-dr-check: armdocker.rnd.ericsson.se/proj-adp-cicd-drop/common-library-adp-helm-dr-check:${env.HELM_DR_CHECK_TAG}
+  - adp-release-auto: armdocker.rnd.ericsson.se/proj-adp-cicd-drop/bob-adp-release-auto:${env.RELEASE_AUTO_TAG}
+  - adp-auto-int: armdocker.rnd.ericsson.se/proj-adp-cicd-drop/adp-int-helm-chart-auto:${env.AUTO_INT_TAG}
+
+properties:
+  - chart-name: eric-bos-dr-stub
+  - skipped-helm-design-rules: "-DhelmDesignRule.config.DR-D1120-045=skip -DhelmDesignRule.config.DR-D1121-064=skip -DhelmDesignRule.config.DR-D1123-124=skip -DhelmDesignRule.config.DR-D1123-125=skip -DhelmDesignRule.config.DR-D1123-127=skip -DhelmDesignRule.config.DR-D1123-128=skip -DhelmDesignRule.config.DR-D470217-001=skip -DhelmDesignRule.config.DR-D1121-011=skip -DhelmDesignRule.config.DR-D1121-060=skip -DhelmDesignRule.config.DR-D1120-061=skip -DhelmDesignRule.config.DR-D1123-113=skip -DhelmDesignRule.config.DR-D1123-133=skip"
+  - helm-chart-repo-server-path: https://arm.sero.gic.ericsson.se/artifactory/proj-so-gs-all-helm
+  - helm-chart-dev-repo-server-path: https://arm.sero.gic.ericsson.se/artifactory/proj-so-snapshots-helm
+
+var:
+  - version
+  - git-remote-origin-url
+  - gerrit-central-repo-url
+
+env:
+
+  # Credentials
+  - SERO_ARTIFACTORY_REPO_USER (default=esoadm100)
+  - SERO_ARTIFACTORY_REPO_PSW (default=) # Need to add api token of functional user, esoadm100
+
+  # default docker image tags
+  - HELM_DR_CHECK_TAG (default=latest)
+  - RELEASE_AUTO_TAG (default=latest)
+  - AUTO_INT_TAG (default=latest)
+
+  - GERRIT_CENTRAL (default=gerrit.ericsson.se)
+  - GERRIT_MIRROR (default=gerritmirror-ha.lmera.ericsson.se)
+
+rules:
+  clean-workspace:
+    - task: rm
+      cmd:
+        - rm -rf .bob/
+
+  lint:
+    - task: helm
+      docker-image: adp-helm-dr-check
+      cmd: helm lint charts/${chart-name}
+    - task: helm-chart-check
+      docker-image: adp-helm-dr-check
+      cmd:
+        - helm-dr-check --helm-chart charts/${chart-name}  ${skipped-helm-design-rules} --helm-v3 --output .bob/ -f scripts/dr-values.yaml
+
+
+  # build the helm chart
+  package:
+    - task: calculate new version with patch increase
+      cmd: version=$(grep '^version:' charts/${chart-name}/Chart.yaml | awk '{print $2}'| awk -F. '{print $1"."$2"."($3+1)"-1"}'); echo $version > .bob/var.version
+    - task: package-helm
+      docker-image: adp-release-auto
+      docker-flags:
+        - "--env ENABLE_HELM_V3=true"
+        - "--env VERSION=${var.version}"
+        - "--env ARTIFACT_NAME=${chart-name}"
+      cmd:
+        - chmod 777 scripts/update-chart-version.sh
+        - scripts/update-chart-version.sh
+
+  # publish the helm chart
+  publish:
+    - task: configure-git-remote-for-push
+      cmd:
+        - git config --get remote.origin.url >> .bob/var.git-remote-origin-url
+        - cat .bob/var.git-remote-origin-url | sed s#${env.GERRIT_MIRROR}#${env.GERRIT_CENTRAL}#g >> .bob/var.gerrit-central-repo-url
+    - task: commit-changes
+      cmd:
+        - git remote set-url --push origin ${var.gerrit-central-repo-url}
+        - chmod 777 scripts/git-commit.sh
+        - scripts/git-commit.sh ${var.version}
+    - task: helm-upload-internal
+      docker-image: adp-release-auto
+      docker-flags:
+        - "--env SERO_ARTIFACTORY_REPO_PSW=${env.SERO_ARTIFACTORY_REPO_PSW}"
+      cmd: upload_file.sh
+        --filename=.bob/${chart-name}-internal/${chart-name}-${var.version}.tgz
+        --repository=${helm-chart-repo-server-path}/${chart-name}
+        --api-token=${env.SERO_ARTIFACTORY_REPO_PSW}

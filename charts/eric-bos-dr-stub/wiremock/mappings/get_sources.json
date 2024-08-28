@@ -1,0 +1,18 @@
+{
+    "request": {
+        "method": "GET",
+        "url": "/sources",
+        "cookies": {
+            "JSESSIONID": {
+                "matches": "a52f3a6d-d328-4708-bfa3-5f2d5dfcc151"
+            }
+        }
+    },
+    "response": {
+        "status": 200,
+		"bodyFileName": "sources.json",
+        "headers": {
+            "Content-Type": "application/json"
+        }
+    }
+}

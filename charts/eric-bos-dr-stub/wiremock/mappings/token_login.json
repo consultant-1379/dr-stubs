@@ -1,0 +1,22 @@
+{
+	"request": {
+		"method": "POST",
+		"urlPattern": "/token?(.*)"
+	},
+	"response": {
+		"status": 200,
+		"jsonBody": {
+			"access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcmVmZXJyZWRfdXNlcm5hbWUiOiJkci11c2VyIn0.STtPZ7Ar0qJzfIu7S723DOO2wHmp18n47edXTzm8jcA",
+			"expires_in": 300,
+			"refresh_expires_in": 1800,
+			"refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcmVmZXJyZWRfdXNlcm5hbWUiOiJkci11c2VyIn0.STtPZ7Ar0qJzfIu7S723DOO2wHmp18n47edXTzm8jcA",
+			"token_type": "Bearer",
+			"not-before-policy": 0,
+			"session_state": "94cdb815-f874-4ceb-89c6-5db9570d377e",
+			"scope": "email profile"
+		},
+		"headers": {
+			"Content-Type": "application/json"
+		}
+	}
+}

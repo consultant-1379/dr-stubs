@@ -1,0 +1,19 @@
+{
+    "request": {
+        "method": "POST",
+        "urlPathPattern": "/reconcile/targets/([0-9]*)",
+        "headers": {
+            "Authorization": {
+                "matches": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcmVmZXJyZWRfdXNlcm5hbWUiOiJkci11c2VyIn0.STtPZ7Ar0qJzfIu7S723DOO2wHmp18n47edXTzm8jcA"
+            }
+        }
+    },
+    "response": {
+        "status": 200,
+		"bodyFileName": "reconcile.json",
+		"transformers": ["response-template"],
+        "headers": {
+            "Content-Type": "application/json"
+        }
+    }
+}

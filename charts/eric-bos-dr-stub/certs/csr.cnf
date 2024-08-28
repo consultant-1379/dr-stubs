@@ -1,0 +1,20 @@
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+CN = eric-bos-dr-stub
+
+[v3_req]
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = eric-bos-dr-stub-kafka
+DNS.2 = eric-bos-dr-stub-2-kafka
+DNS.3 = eric-bos-dr-stub-3-kafka
+DNS.4 = eric-bos-dr-stub-4-kafka
+DNS.5 = eric-bos-dr-stub-wiremock
+DNS.6 = eric-bos-dr-stub-2-wiremock
+DNS.7 = eric-bos-dr-stub-3-wiremock
+DNS.8 = eric-bos-dr-stub-4-wiremock

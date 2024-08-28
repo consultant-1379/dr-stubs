@@ -1,0 +1,116 @@
+global:
+  registry:
+    imagePullPolicy: IfNotPresent
+    url: armdocker.rnd.ericsson.se
+  nodeSelector: {}
+  annotations: {}
+  labels: {}
+  pullSecret: eric-adp-example-secret
+
+nameOverride: ""
+fullnameOverride: ""
+podAnnotations: {}
+annotations: {}
+labels: {}
+
+imagePullSecrets: []
+
+imageCredentials:
+  repoPath:
+  mainImage:
+    repoPath: # overrides repoPath from eric-product-info.yaml
+    registry:
+      url:
+
+terminationGracePeriodSeconds: 10
+
+replicaCount: 1
+
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 25%
+    maxSurge: 25%
+
+nodeSelector: {}
+tolerations: []
+topologySpreadConstraints: []
+
+affinity:
+  podAntiAffinity: "soft"
+
+podPriority:
+  eric-bos-dr-stub:
+    priorityClassName: ""
+
+jvm:
+  heap:
+    min: "64m"
+    max: "128m"
+
+resources:
+  eric-bos-dr-stub-wiremock:
+    requests:
+      memory: "100M"
+      cpu: "100m"
+      ephemeral-storage:
+    limits:
+      memory: "200M"
+      cpu: "200m"
+      ephemeral-storage:
+  eric-bos-dr-stub-kafka:
+    requests:
+        memory: "500M"
+        cpu: "200m"
+        ephemeral-storage:
+    limits:
+        memory: "900M"
+        cpu: "300m"
+        ephemeral-storage:
+
+probes:
+  eric-bos-dr-stub-wiremock:
+    livenessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 5
+      timeoutSeconds: 10
+      failureThreshold: 3
+    readinessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 5
+      timeoutSeconds: 10
+      failureThreshold: 3
+  eric-bos-dr-stub-kafka:
+    livenessProbe:
+        initialDelaySeconds: 90
+        periodSeconds: 10
+        timeoutSeconds: 10
+        failureThreshold: 3
+    readinessProbe:
+        initialDelaySeconds: 90
+        periodSeconds: 10
+        timeoutSeconds: 10
+        failureThreshold: 3
+
+prometheus:
+  path: /actuator/prometheus
+  scrape: true
+
+server:
+  port: 8080
+
+wiremock:
+  mtls:
+    enabled: true # if disabled then stub will not verify client cert, TLS only.
+
+kafka:
+  nodeId: 1
+  topicAutoCreate: false
+  sslClientAuth: required
+
+ingress:
+  enabled: true
+  hostname: ""
+  ingressClass: ""
+  tls:
+    passthrough: true

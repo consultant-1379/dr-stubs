@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "eric-bos-dr-stub.name" . }}-kafka
+  labels:
+  {{- include "eric-bos-dr-stub.labels" . | nindent 4 }}
+  annotations:
+  {{- include "eric-bos-dr-stub.annotations" . | nindent 4 }}
+spec:
+  {{- if .Values.global }}
+  {{- if .Values.global.internalIPFamily }}
+  ipFamilies: [{{ .Values.global.internalIPFamily | quote }}]
+  {{- end }}
+  {{- end }}
+  ports:
+    - protocol: TCP
+      port: 9092
+      targetPort: 9092
+      name: kafka-plaintext
+    - protocol: TCP
+      port: 9094
+      targetPort: 9094
+      name: kafka-ssl
+    - protocol: TCP
+      port: 8082
+      targetPort: 8082
+      name: kafka-http
+  selector:
+    app: {{ include "eric-bos-dr-stub.name" . }}-kafka

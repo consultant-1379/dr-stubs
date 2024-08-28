@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "eric-bos-dr-stub.name" . }}-wiremock
+  labels:
+  {{- include "eric-bos-dr-stub.labels" . | nindent 4 }}
+    app: {{ template "eric-bos-dr-stub.name" . }}-wiremock
+    chart: {{ template "eric-bos-dr-stub.chart" . }}
+  annotations:
+  {{- include "eric-bos-dr-stub.annotations" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: {{ .Values.updateStrategy.type }}
+        {{- if and (eq .Values.updateStrategy.type "RollingUpdate") .Values.updateStrategy.rollingUpdate }}
+    rollingUpdate:
+{{ toYaml .Values.updateStrategy.rollingUpdate | trim | indent 6 }}
+    {{- end }}
+  selector:
+    matchLabels:
+      app: {{ include "eric-bos-dr-stub.name" . }}-wiremock
+  template:
+    metadata:
+      annotations:
+        {{- include "eric-bos-dr-stub.annotations" . | nindent 8 }}
+      labels:
+        {{- include "eric-bos-dr-stub.labels" .| nindent 8}}
+        app: {{ template "eric-bos-dr-stub.name" . }}-wiremock
+        chart: {{ template "eric-bos-dr-stub.chart" . }}
+    spec:
+      {{ with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{ toYaml . | nindent 6 }}
+      {{ end }}
+      {{- if index .Values.podPriority "eric-bos-dr-stub" "priorityClassName" }}
+      priorityClassName: {{ index .Values.podPriority "eric-bos-dr-stub" "priorityClassName" | quote }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- if  .Values.imageCredentials.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.imageCredentials.pullSecret | quote }}
+      {{- else if .Values.global.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.global.pullSecret | quote }}
+      {{- end }}
+      affinity:
+        podAntiAffinity:
+      {{- include "eric-bos-dr-stub.pod-antiaffinity-type" . | nindent 10 }}
+      serviceAccountName: {{ template "eric-bos-dr-stub.name" . }}-sa
+      containers:
+      - name: {{ .Chart.Name }}-wiremock
+        image: {{ template "eric-bos-dr-stub.imagePath" (dict "imageId" "wiremockImage" "values" .Values "files" .Files) }}
+        imagePullPolicy: {{ .Values.global.registry.imagePullPolicy | quote }}
+        args: ["-global-response-templating",
+               "-verbose",
+               "--https-port",
+               "8443",
+        {{- if $.Values.wiremock.mtls.enabled }}
+               "--https-require-client-cert",
+        {{- end }}
+               "--https-keystore",
+               "/home/wiremock/certs/server.p12",
+               "--https-truststore",
+               "/home/wiremock/certs/ca.p12",
+        ]
+        env:
+          - name: JAVA_OPTS
+            value: "-Xms{{ .Values.jvm.heap.min }} -Xmx{{ .Values.jvm.heap.max }}"
+        ports:
+          - name: http
+            containerPort: 8080
+          - name: https
+            containerPort: 8443
+        resources: {{- include "eric-bos-dr-stub.resourcesHelper" (dict "Values" .Values "resourceName" "eric-bos-dr-stub-wiremock") | nindent 12 }}
+        livenessProbe:
+          httpGet:
+            path: /__admin/mappings
+            port: 8080
+          initialDelaySeconds: {{ index .Values.probes "eric-bos-dr-stub-wiremock" "livenessProbe" "initialDelaySeconds" }}
+          periodSeconds: {{ index .Values.probes "eric-bos-dr-stub-wiremock" "livenessProbe" "periodSeconds" }}
+          timeoutSeconds: {{ index .Values.probes "eric-bos-dr-stub-wiremock" "livenessProbe" "timeoutSeconds" }}
+          failureThreshold: {{ index .Values.probes  "eric-bos-dr-stub-wiremock" "livenessProbe" "failureThreshold" }}
+        readinessProbe:
+          httpGet:
+            path: /__admin/mappings
+            port: 8080
+          initialDelaySeconds: {{ index .Values.probes "eric-bos-dr-stub-wiremock" "readinessProbe" "initialDelaySeconds" }}
+          periodSeconds: {{ index .Values.probes "eric-bos-dr-stub-wiremock" "readinessProbe" "periodSeconds" }}
+          timeoutSeconds: {{ index .Values.probes "eric-bos-dr-stub-wiremock" "readinessProbe" "timeoutSeconds" }}
+          failureThreshold: {{ index .Values.probes  "eric-bos-dr-stub-wiremock" "readinessProbe" "failureThreshold" }}
+        volumeMounts: 
+        - mountPath: /home/wiremock/mappings
+          name: mappings-volume
+        - mountPath: /home/wiremock/__files
+          name: files-volume
+        - mountPath: /home/wiremock/certs
+          name: certs-volume
+
+
+      volumes:
+      - name: mappings-volume
+        configMap:
+          name: {{ include "eric-bos-dr-stub.name" . }}-wiremock-mappings-config
+      - name: files-volume
+        configMap:
+          name: {{ include "eric-bos-dr-stub.name" . }}-wiremock-files-config
+      - name: certs-volume
+        secret:
+          secretName: {{ include "eric-bos-dr-stub.name" . }}-wiremock-certs-secret
+
+  {{- include "eric-bos-dr-stub.nodeSelector" .| indent 6 }}

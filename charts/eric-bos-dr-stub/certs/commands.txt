@@ -1,0 +1,32 @@
+# The following commands are used to generate the CA and server certs for secure communication with the wiremock and kafka deployments.
+# The same CA and server certs are used by both deployments. The certs are generated in PKCS12 format for use by wiremock
+# and as java keystores for used by kafka.
+# The generated server cert configures the subjectAlternativeName extension, so it can be used by both deployments.
+
+
+1. Create CA private key and cert
+openssl req -x509 -sha256 -days 1825 -newkey rsa:2048 -keyout rootCA.key -out rootCA.crt # pass-phrase = password
+
+2. Create server private key
+openssl genrsa -des3 -out server.key 2048 # pass-phrase='password'
+
+3. Create Certificate signing request for server
+ openssl req -new -key server.key -out server.csr -config csr.cnf
+
+4. Create server cert, signed by root CA
+openssl x509 -req -CA rootCA.crt -CAkey rootCA.key -in server.csr -out server.crt -days 365 -CAcreateserial -extensions v3_req -extfile csr.cnf
+-- The generated server cert should contain the subjectAltNames defined in the config file csr.cnf.
+
+5. Creating PKCS12 server cert (used by wiremock)
+cat server.key server.crt > server.pem
+openssl pkcs12 -export -in server.pem -out server.p12
+
+6. Create PKCS12 ca cert (used by wiremock)
+cat rootCA.key rootCA.crt > ca.pem
+openssl pkcs12 -export -in ca.pem -out ca.p12
+
+7. Create keystore JKS (used by kafka)
+keytool -importkeystore -srckeystore server_keystore.p12 -srcstoretype PKCS12 -destkeystore keystore.jks  -deststoretype JKS -srcstorepass password -deststorepass password
+
+8. Create truststore JKS (used by kafka)
+keytool -importkeystore -srckeystore ca.p12 -srcstoretype PKCS12 -destkeystore truststore.jks  -deststoretype JKS -srcstorepass password -deststorepass password

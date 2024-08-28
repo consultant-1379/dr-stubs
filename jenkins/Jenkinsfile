@@ -1,0 +1,77 @@
+def bob = "bob/bob"
+
+pipeline {
+    agent none
+
+    environment {
+        SERO_ARTIFACTORY_REPO = credentials('esoadm100-sero-artifactory')
+        SELI_ARTIFACTORY_REPO= credentials('esoadm100-seli-artifactory')
+        HELM_CREDS = credentials('esoadm100_helm_repository_creds_file')
+        GERRIT_PASSWORD = credentials ('esoadm100')
+    }
+
+    stages {
+
+        stage('Set build name') {
+             steps {
+                script {
+                   // Set build name
+                   authorName = sh(returnStdout: true, script: 'git show -s --pretty=%an')
+                   currentBuild.displayName = currentBuild.displayName + ' / ' + authorName
+                }
+             }
+        }
+
+        stage ('Prepare workspace') {
+            steps {
+                // bob repo is cloned because if we use the bob docker image, then shell commands will not be run on the slave, they will be run inside the bob docker image.
+                sh 'git clone ssh://gerrit.ericsson.se:29418/adp-cicd/bob/'
+                sh "${bob} -r rulesets/ruleset2.0.yaml clean-workspace"
+            }
+        }
+
+        stage('Lint Helm') {
+            steps {
+                sh "${bob} -r rulesets/ruleset2.0.yaml lint:helm"
+            }
+        }
+
+        stage('Lint ADP Helm Design Rule Check') {
+            steps {
+                sh "${bob} -r rulesets/ruleset2.0.yaml lint:helm-chart-check"
+            }
+            post {
+                always {
+                    archiveArtifacts allowEmptyArchive: true, artifacts: '.bob/design-rule-check-report.*'
+                }
+            }
+        }
+
+        stage('Package') {
+            when {
+                expression {
+                    params.RELEASE == 'true';
+                }
+            }
+            steps {
+                sh "${bob} -r rulesets/ruleset2.0.yaml package"
+            }
+        }
+
+        stage('Publish') {
+            when {
+                expression {
+                    params.RELEASE == 'true';
+                }
+            }
+            steps {
+                sh "${bob} -r rulesets/ruleset2.0.yaml publish"
+            }
+        }
+    }
+    post{
+        always{
+            cleanWs()
+         }
+    }
+}

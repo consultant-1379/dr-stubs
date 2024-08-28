@@ -1,0 +1,6 @@
+  {
+    "id": "{{request.path.[1]}}",
+    "name": "object{{request.path.[1]}}",
+    "prop1": "value2",
+    "prop2": 2
+  }

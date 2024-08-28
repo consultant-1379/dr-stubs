@@ -1,0 +1,19 @@
+{
+    "request": {
+        "method": "GET",
+        "urlPathPattern": "/sources/([0-9]*)",
+        "cookies": {
+            "JSESSIONID": {
+                "matches": "a52f3a6d-d328-4708-bfa3-5f2d5dfcc151"
+            }
+        }
+    },
+    "response": {
+        "status": 200,
+		"bodyFileName": "source_{{request.path.[1]}}.json",
+		"transformers": ["response-template"],
+        "headers": {
+            "Content-Type": "application/json"
+        }
+    }
+}

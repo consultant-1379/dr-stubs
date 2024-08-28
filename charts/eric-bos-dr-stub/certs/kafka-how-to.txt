@@ -1,0 +1,15 @@
+Create a topic
+==============
+kubectl -n so-team-anvil2 exec -it eric-bos-dr-stub-5c7ddc59fc-gnz9b  -c eric-bos-dr-stub-kafka-broker-one -- bash -c "/usr/bin/kafka-topics --create --topic my_topic --partitions 1 --replication-factor 1 --bootstrap-server eric-bos-dr-stub-kafka:9092"
+
+Send a message from a producer
+==============================
+exec onto the broker pod
+kubectl --namespace so-team-anvil2 exec -it eric-bos-dr-stub-56c49b5fb-2bsg2 -c eric-bos-dr-stub-kafka-broker-one --bash
+start producer
+/usr/bin/kafka-console-producer --bootstrap-server eric-bos-dr-stub-kafka:9092 --topic topic_one
+send messages
+>{"eventType": "CREATE"}
+
+If the broker is SSL then include the following properties in your 'kafka-console-producer' command
+--producer-property security.protocol=SSL --producer-property  ssl.keystore.location=/etc/kafka/secrets/keystore.jks --producer-property ssl.keystore.password=password --producer-property ssl.key.password=password --producer-property ssl.truststore.location=/etc/kafka/secrets/truststore.jks --producer-property ssl.truststore.password=password

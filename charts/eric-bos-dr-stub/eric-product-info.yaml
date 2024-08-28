@@ -1,0 +1,33 @@
+#
+# COPYRIGHT Ericsson 2023
+#
+#
+#
+# The copyright to the computer program(s) herein is the property of
+#
+# Ericsson Inc. The programs may be used and/or copied only with written
+#
+# permission from Ericsson Inc. or in accordance with the terms and
+#
+# conditions stipulated in the agreement/contract under which the
+#
+# program(s) have been supplied.
+#
+
+productName: "Discover And Reconciliation Test Stub"
+productNumber: "CRX 901 000"
+images:
+  wiremockImage:
+    productName: "Wiremock"
+    productNumber: ""
+    registry: "armdocker.rnd.ericsson.se"
+    repoPath: "dockerhub-ericsson-remote/wiremock"
+    name: "wiremock"
+    tag: "2.35.0"
+  kafkaImage:
+    productName: "kafka"
+    productNumber: ""
+    registry: "armdocker.rnd.ericsson.se"
+    repoPath: "dockerhub-ericsson-remote/confluentinc"
+    name: "confluent-local"
+    tag: "7.6.0"
